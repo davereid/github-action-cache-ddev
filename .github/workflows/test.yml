@@ -67,10 +67,12 @@ jobs:
         os: [ubuntu-24.04, ubuntu-26.04, ubuntu-24.04-arm]
         fixture: [ddevProjComposerNpm, ddevProjYarn4]
         include:
+          # GIT_ALLOW_PROTOCOL stops Composer's fallback to cloning from source, and the
+          # unreachable registries stop Corepack and Yarn from downloading.
           - fixture: ddevProjComposerNpm
-            offline: ddev exec 'COMPOSER_DISABLE_NETWORK=1 composer install' && ddev npm ci --offline
+            offline: ddev exec 'COMPOSER_DISABLE_NETWORK=1 GIT_ALLOW_PROTOCOL=file composer install' && ddev npm ci --offline
           - fixture: ddevProjYarn4
-            offline: ddev exec 'YARN_NPM_REGISTRY_SERVER=http://127.0.0.1:9 yarn install --immutable'
+            offline: ddev exec 'COREPACK_NPM_REGISTRY=http://127.0.0.1:9 YARN_NPM_REGISTRY_SERVER=http://127.0.0.1:9 yarn install --immutable'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -102,3 +104,16 @@ jobs:
         env:
           OFFLINE: ${{ matrix.offline }}
         run: eval "$OFFLINE"
+
+  # One check for the ci ruleset to require, instead of every matrix job.
+  tests:
+    name: tests
+    needs: [cache-save, cache-restore]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: All tests passed
+        env:
+          RESULT: ${{ needs.cache-restore.result }}
+        run: test "$RESULT" = 'success'
