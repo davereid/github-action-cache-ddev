@@ -1,0 +1,4 @@
+self-hosted-runner:
+  labels:
+    # @todo Remove once actionlint knows the GitHub-hosted Ubuntu 26.04 runners.
+    - ubuntu-26.04

@@ -1,0 +1,4 @@
+rules:
+  # The tests run the action from this checkout with uses: ./, which is what they need to test.
+  self-repository:
+    disable: true

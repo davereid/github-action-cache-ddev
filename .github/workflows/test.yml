@@ -15,14 +15,16 @@ permissions: {}
 jobs:
   # Starts DDEV before the action, so the action restarts it.
   cache-save:
-    name: cache-save (${{ matrix.fixture }}, DDEV ${{ matrix.version }})
-    runs-on: ubuntu-24.04
+    name: cache-save (${{ matrix.fixture }}, DDEV ${{ matrix.version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read # actions/checkout
     strategy:
       fail-fast: false
       matrix:
-        version: [latest, head]
+        # The oldest version ddev/github-action-setup-ddev tests, the latest release, and HEAD.
+        version: ['1.24.8', latest, head]
+        os: [ubuntu-24.04, ubuntu-26.04, ubuntu-24.04-arm]
         fixture: [ddevProjComposerNpm, ddevProjYarn4]
         include:
           - fixture: ddevProjComposerNpm
@@ -53,14 +55,16 @@ jobs:
   # Runs the action before DDEV starts, then installs without network access.
   cache-restore:
     needs: cache-save
-    name: cache-restore (${{ matrix.fixture }}, DDEV ${{ matrix.version }})
-    runs-on: ubuntu-24.04
+    name: cache-restore (${{ matrix.fixture }}, DDEV ${{ matrix.version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read # actions/checkout
     strategy:
       fail-fast: false
       matrix:
-        version: [latest, head]
+        # The oldest version ddev/github-action-setup-ddev tests, the latest release, and HEAD.
+        version: ['1.24.8', latest, head]
+        os: [ubuntu-24.04, ubuntu-26.04, ubuntu-24.04-arm]
         fixture: [ddevProjComposerNpm, ddevProjYarn4]
         include:
           - fixture: ddevProjComposerNpm
