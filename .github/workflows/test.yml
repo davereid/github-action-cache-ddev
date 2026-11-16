@@ -16,7 +16,7 @@ jobs:
   # Starts DDEV before the action, so the action restarts it.
   cache-save:
     name: cache-save (${{ matrix.fixture }}, DDEV ${{ matrix.version }})
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read # actions/checkout
     strategy:
@@ -54,7 +54,7 @@ jobs:
   cache-restore:
     needs: cache-save
     name: cache-restore (${{ matrix.fixture }}, DDEV ${{ matrix.version }})
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read # actions/checkout
     strategy:
