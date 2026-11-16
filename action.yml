@@ -1,0 +1,86 @@
+name: 'Cache DDEV dependencies'
+description: "Cache DDEV's Composer, npm, Yarn, Corepack and Node.js downloads between workflow runs"
+author: 'Dave Reid'
+
+inputs:
+  ddevDir:
+    description: 'Path to your DDEV project. This path needs to contain the .ddev/ directory.'
+    required: false
+    default: '.'
+
+  restart:
+    description: 'Restart the project if DDEV is already running, so it uses the cache. With false, the cache only applies from the next start.'
+    required: false
+    default: 'true'
+
+outputs:
+  cache-hit:
+    description: 'Whether the cache was restored from an exact match for the lock files and DDEV version.'
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check DDEV version
+      id: ddev
+      shell: bash
+      run: |
+        if ! command -v ddev >/dev/null; then
+          echo "::error::DDEV isn't installed: run ddev/github-action-setup-ddev first."
+          exit 1
+        fi
+        echo "version=$(ddev --version | awk '{print $NF}')" >> "$GITHUB_OUTPUT"
+
+    - name: Restore DDEV caches
+      id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/ddev-cache
+        key: ddev-cache-${{ runner.os }}-${{ runner.arch }}-${{ steps.ddev.outputs.version }}-${{ hashFiles(format('{0}/composer.lock', inputs.ddevDir), format('{0}/package-lock.json', inputs.ddevDir), format('{0}/yarn.lock', inputs.ddevDir), format('{0}/.ddev/config.yaml', inputs.ddevDir)) }}
+        restore-keys: ddev-cache-${{ runner.os }}-${{ runner.arch }}-
+
+    # DDEV keeps its caches in a Docker volume that actions/cache can't reach.
+    # Mount runner directories over the package cache directories instead, so
+    # DDEV's own cache settings write to them.
+    - name: Mount DDEV caches from the runner
+      shell: bash
+      working-directory: ${{ inputs.ddevDir }}
+      env:
+        CACHE_DIR: ${{ runner.temp }}/ddev-cache
+      run: |
+        {
+          echo '# Written by github-action-cache-ddev.'
+          echo 'services:'
+          echo '  web:'
+          echo '    volumes:'
+          # Leaves out history and terminus/cache, which holds a login session.
+          for dir in composer corepack n_prefix npm pip yarn; do
+            # Created here, or Docker creates it as root and the web container can't write to it.
+            mkdir -p "$CACHE_DIR/$dir"
+            # DDEV v1.25 and earlier use ddev-global-cache, later versions ddev-project-cache.
+            # The path a version doesn't use is ignored.
+            echo "      - $CACHE_DIR/$dir:/mnt/ddev-global-cache/$dir"
+            echo "      - $CACHE_DIR/$dir:/mnt/ddev-project-cache/$dir"
+          done
+        } > .ddev/docker-compose.cache-ddev.yaml
+        cat .ddev/docker-compose.cache-ddev.yaml
+
+    - name: Restart DDEV to use the caches
+      shell: bash
+      working-directory: ${{ inputs.ddevDir }}
+      env:
+        RESTART: ${{ inputs.restart }}
+      run: |
+        status="$(ddev describe --json-output 2>/dev/null | jq -r '.raw.status // empty' || true)"
+        if [[ "$status" != 'running' ]]; then
+          exit 0
+        fi
+        if [[ "$RESTART" == 'true' ]]; then
+          ddev restart
+        else
+          echo "::warning::DDEV is already running, so it only uses the caches after the next ddev restart."
+        fi
+
+branding:
+  icon: 'archive'
+  color: yellow

@@ -1,0 +1,5 @@
+name: cache-ddev-yarn4
+type: php
+docroot: ""
+omit_containers: [db]
+corepack_enable: true

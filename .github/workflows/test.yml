@@ -1,0 +1,98 @@
+name: test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  # Starts DDEV before the action, so the action restarts it.
+  cache-save:
+    name: cache-save (${{ matrix.fixture }}, DDEV ${{ matrix.version }})
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read # actions/checkout
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [latest, head]
+        fixture: [ddevProjComposerNpm, ddevProjYarn4]
+        include:
+          - fixture: ddevProjComposerNpm
+            install: ddev composer install && ddev npm ci
+          - fixture: ddevProjYarn4
+            install: ddev yarn install --immutable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ddev/github-action-setup-ddev@fdf2f5c97943bae638f31df6df86f1defa6210c0 # v1.12.1
+        with:
+          ddevDir: tests/fixtures/${{ matrix.fixture }}
+          version: ${{ matrix.version }}
+
+      - uses: ./
+        with:
+          ddevDir: tests/fixtures/${{ matrix.fixture }}
+
+      - name: Install dependencies to fill the cache
+        working-directory: tests/fixtures/${{ matrix.fixture }}
+        env:
+          INSTALL: ${{ matrix.install }}
+        run: eval "$INSTALL"
+
+  # Runs the action before DDEV starts, then installs without network access.
+  cache-restore:
+    needs: cache-save
+    name: cache-restore (${{ matrix.fixture }}, DDEV ${{ matrix.version }})
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read # actions/checkout
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [latest, head]
+        fixture: [ddevProjComposerNpm, ddevProjYarn4]
+        include:
+          - fixture: ddevProjComposerNpm
+            offline: ddev exec 'COMPOSER_DISABLE_NETWORK=1 composer install' && ddev npm ci --offline
+          - fixture: ddevProjYarn4
+            offline: ddev exec 'YARN_NPM_REGISTRY_SERVER=http://127.0.0.1:9 yarn install --immutable'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ddev/github-action-setup-ddev@fdf2f5c97943bae638f31df6df86f1defa6210c0 # v1.12.1
+        with:
+          ddevDir: tests/fixtures/${{ matrix.fixture }}
+          version: ${{ matrix.version }}
+          autostart: false
+
+      - uses: ./
+        id: cache
+        with:
+          ddevDir: tests/fixtures/${{ matrix.fixture }}
+
+      - name: Cache restored
+        env:
+          CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+        run: test "$CACHE_HIT" = 'true'
+
+      - name: Start DDEV
+        working-directory: tests/fixtures/${{ matrix.fixture }}
+        run: ddev start
+
+      - name: Install dependencies without network access
+        working-directory: tests/fixtures/${{ matrix.fixture }}
+        env:
+          OFFLINE: ${{ matrix.offline }}
+        run: eval "$OFFLINE"

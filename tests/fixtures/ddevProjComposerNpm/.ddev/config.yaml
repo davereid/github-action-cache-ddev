@@ -1,0 +1,4 @@
+name: cache-ddev-composer-npm
+type: php
+docroot: ""
+omit_containers: [db]
