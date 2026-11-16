@@ -34,7 +34,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: ddev/github-action-setup-ddev@fdf2f5c97943bae638f31df6df86f1defa6210c0 # v1.12.1
+      # @todo Pin to a release once one supports version: head (ddev/github-action-setup-ddev#57).
+      - uses: ddev/github-action-setup-ddev@222a22f69087994aeb075fd87c45a8c8cd61ae76 # main
         with:
           ddevDir: tests/fixtures/${{ matrix.fixture }}
           version: ${{ matrix.version }}
@@ -71,7 +72,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: ddev/github-action-setup-ddev@fdf2f5c97943bae638f31df6df86f1defa6210c0 # v1.12.1
+      # @todo Pin to a release once one supports version: head (ddev/github-action-setup-ddev#57).
+      - uses: ddev/github-action-setup-ddev@222a22f69087994aeb075fd87c45a8c8cd61ae76 # main
         with:
           ddevDir: tests/fixtures/${{ matrix.fixture }}
           version: ${{ matrix.version }}
