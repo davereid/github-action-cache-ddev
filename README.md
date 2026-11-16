@@ -66,4 +66,19 @@ Shell history and the Terminus cache, which holds a login session, aren't cached
 
 The cache key covers `composer.lock`, `package-lock.json`, `yarn.lock`, `.ddev/config.yaml` and the DDEV version. When any of them changes, the newest older cache is restored, and a new one is saved at the end of the job.
 
-Caching DDEV's Docker images doesn't help: restoring them takes longer than pulling them ([ddev/github-action-setup-ddev#15](https://github.com/ddev/github-action-setup-ddev/issues/15)).
+Caching DDEV's Docker images doesn't help: restoring them takes longer than pulling them ([ddev/github-action-setup-ddev#15](https://github.com/ddev/github-action-setup-ddev/issues/15)). To skip the whole DDEV setup instead, including images and add-ons, use runners that start from a snapshot, as in [Using WarpBuild to speed up DDEV in CI](https://ddev.com/blog/ddev-ci-warpbuild/). Then this action isn't needed.
+
+## Drainpipe
+
+[Drainpipe](https://github.com/Lullabot/drainpipe)'s `ddev` action points Composer at `.ddev/.drainpipe-composer-cache` by default, which this action doesn't cache. Turn that off so Composer uses DDEV's cache:
+
+```yaml
+      - uses: ./.github/actions/drainpipe/ddev
+        with:
+          composer-cache-dir: false
+      - uses: davereid/github-action-cache-ddev@v1
+```
+
+Drainpipe's action starts DDEV, so this action restarts it.
+
+The action warns when `.ddev/config*.yaml` sets `COMPOSER_CACHE_DIR`, `npm_config_cache`, `YARN_CACHE_FOLDER`, `YARN_GLOBAL_FOLDER` or `COREPACK_HOME`, since those paths bypass the cache.

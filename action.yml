@@ -48,6 +48,12 @@ runs:
       env:
         CACHE_DIR: ${{ runner.temp }}/ddev-cache
       run: |
+        # A cache path set in the project's config bypasses the mounted directories,
+        # e.g. Drainpipe's .ddev/.drainpipe-composer-cache.
+        grep -H -E '(COMPOSER_CACHE_DIR|npm_config_cache|YARN_CACHE_FOLDER|YARN_GLOBAL_FOLDER|COREPACK_HOME)=' .ddev/config*.yaml \
+          | while IFS= read -r match; do
+              echo "::warning::${match} overrides DDEV's cache path, so github-action-cache-ddev doesn't cache it."
+            done || true
         {
           echo '# Written by github-action-cache-ddev.'
           echo 'services:'
