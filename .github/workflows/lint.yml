@@ -3,7 +3,7 @@ name: Lint
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, '*.x']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
