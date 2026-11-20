@@ -15,20 +15,27 @@ jobs:
   release-please:
     name: Release Please
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # Create release commits, tags and GitHub releases, and move the major version tag.
-      issues: write # Create and update release labels.
-      pull-requests: write # Open and update the release pull request.
+    environment: release # Holds the App's private key, for main only.
+    permissions: {} # The App token below does all the writing.
     steps:
-      # @todo Use a GitHub App token, so release PR checks start without approval (#1).
+      # A GitHub App token, not GITHUB_TOKEN, so release PR checks start without approval (#1).
+      - uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
+        id: app-token
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write # Create release commits, tags and GitHub releases, and move the major version tag.
+          permission-pull-requests: write # Open and update the release pull request, and its labels.
+
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.release.outputs.release_created == 'true'
         with:
+          token: ${{ steps.app-token.outputs.token }}
           persist-credentials: true # zizmor: ignore[artipacked] Pushes the major version tag below.
 
       # Workflows use the action as @v1, so point that tag at each new v1.x.y release.
