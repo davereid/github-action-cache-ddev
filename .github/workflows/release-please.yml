@@ -43,6 +43,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.release.outputs.release_created == 'true'
         with:
+          ref: ${{ steps.release.outputs.tag_name }} # The default checkout fetches no tags.
           token: ${{ steps.app-token.outputs.token || github.token }}
           persist-credentials: true # zizmor: ignore[artipacked] Pushes the major version tag below.
 
@@ -51,7 +52,6 @@ jobs:
         if: steps.release.outputs.release_created == 'true'
         env:
           MAJOR: ${{ steps.release.outputs.major }}
-          TAG: ${{ steps.release.outputs.tag_name }}
         run: |
-          git tag -f "v${MAJOR}" "${TAG}^{commit}"
+          git tag -f "v${MAJOR}" HEAD
           git push -f origin "refs/tags/v${MAJOR}"
