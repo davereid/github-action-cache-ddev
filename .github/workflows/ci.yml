@@ -45,15 +45,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The oldest version ddev/github-action-setup-ddev tests, the latest release, and HEAD.
-        version: ['1.24.8', latest, head]
+        # The last release of each minor from the minimum in action.yml, the latest release, and HEAD.
+        # When DDEV releases a new minor, add the previous minor's last release (e.g. '1.25.x' once v1.26.0 is out).
+        version: ['1.23.5', '1.24.10', latest, head]
         os: [ubuntu-24.04, ubuntu-26.04, ubuntu-24.04-arm]
-        fixture: [ddevProjComposerNpm, ddevProjYarn4]
+        fixture: [ddevProjComposerNpm, ddevProjYarn1, ddevProjYarn4]
         include:
           - fixture: ddevProjComposerNpm
-            install: ddev composer install && ddev npm ci
+            install: ddev composer install && ddev npm ci && ddev exec --dir /var/www/html/web/themes/custom/example npm ci
           - fixture: ddevProjYarn4
             install: ddev yarn install --immutable
+          - fixture: ddevProjYarn1
+            install: ddev yarn install --frozen-lockfile
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -85,17 +88,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The oldest version ddev/github-action-setup-ddev tests, the latest release, and HEAD.
-        version: ['1.24.8', latest, head]
+        # Same as cache-save.
+        version: ['1.23.5', '1.24.10', latest, head]
         os: [ubuntu-24.04, ubuntu-26.04, ubuntu-24.04-arm]
-        fixture: [ddevProjComposerNpm, ddevProjYarn4]
+        fixture: [ddevProjComposerNpm, ddevProjYarn1, ddevProjYarn4]
         include:
           # GIT_ALLOW_PROTOCOL stops Composer's fallback to cloning from source, and the
           # unreachable registries stop Corepack and Yarn from downloading.
           - fixture: ddevProjComposerNpm
-            offline: ddev exec 'COMPOSER_DISABLE_NETWORK=1 GIT_ALLOW_PROTOCOL=file composer install' && ddev npm ci --offline
+            offline: ddev exec 'COMPOSER_DISABLE_NETWORK=1 GIT_ALLOW_PROTOCOL=file composer install' && ddev npm ci --offline && ddev exec --dir /var/www/html/web/themes/custom/example npm ci --offline
           - fixture: ddevProjYarn4
             offline: ddev exec 'COREPACK_NPM_REGISTRY=http://127.0.0.1:9 YARN_NPM_REGISTRY_SERVER=http://127.0.0.1:9 yarn install --immutable'
+          - fixture: ddevProjYarn1
+            offline: ddev yarn install --frozen-lockfile --offline
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -108,6 +113,16 @@ jobs:
           version: ${{ matrix.version }}
           autostart: false
 
+      # cache-save had no installed packages when it built the key, so "Cache
+      # restored" fails if these lock files change it.
+      - name: Add lock files the cache key must ignore
+        working-directory: tests/fixtures/${{ matrix.fixture }}
+        run: |
+          mkdir -p vendor/example/package node_modules/example
+          echo '{}' > vendor/example/package/composer.lock
+          echo '{}' > node_modules/example/package-lock.json
+          echo '{}' > node_modules/example/yarn.lock
+
       - uses: ./
         id: cache
         with:
@@ -117,6 +132,10 @@ jobs:
         env:
           CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
         run: test "$CACHE_HIT" = 'true'
+
+      - name: Remove the ignored lock files
+        working-directory: tests/fixtures/${{ matrix.fixture }}
+        run: rm -r vendor node_modules
 
       - name: Start DDEV
         working-directory: tests/fixtures/${{ matrix.fixture }}
@@ -128,15 +147,45 @@ jobs:
           OFFLINE: ${{ matrix.offline }}
         run: eval "$OFFLINE"
 
+  # The last release before the minimum in action.yml must fail.
+  too-old:
+    name: Fails on DDEV 1.22
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read # actions/checkout
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # @todo Pin to a release once one supports version: head (ddev/github-action-setup-ddev#57).
+      - uses: ddev/github-action-setup-ddev@222a22f69087994aeb075fd87c45a8c8cd61ae76 # main
+        with:
+          ddevDir: tests/fixtures/ddevProjComposerNpm
+          version: '1.22.7'
+          autostart: false
+
+      - uses: ./
+        id: cache
+        continue-on-error: true
+        with:
+          ddevDir: tests/fixtures/ddevProjComposerNpm
+
+      - name: Action failed
+        env:
+          OUTCOME: ${{ steps.cache.outcome }}
+        run: test "$OUTCOME" = 'failure'
+
   # One check for the ci ruleset to require, instead of every matrix job.
   tests:
-    name: tests
-    needs: [cache-save, cache-restore]
+    name: All tests
+    needs: [cache-save, cache-restore, too-old]
     if: always()
     runs-on: ubuntu-latest
     permissions: {}
     steps:
       - name: All tests passed
         env:
-          RESULT: ${{ needs.cache-restore.result }}
-        run: test "$RESULT" = 'success'
+          RESTORE: ${{ needs.cache-restore.result }}
+          TOO_OLD: ${{ needs.too-old.result }}
+        run: test "$RESTORE" = 'success' && test "$TOO_OLD" = 'success'

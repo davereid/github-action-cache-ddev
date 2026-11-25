@@ -29,14 +29,23 @@ runs:
           echo "::error::DDEV isn't installed: run ddev/github-action-setup-ddev first."
           exit 1
         fi
-        echo "version=$(ddev --version | awk '{print $NF}')" >> "$GITHUB_OUTPUT"
+        version="$(ddev --version | awk '{print $NF}')"
+        # The oldest version CI tests. Keep it in sync with ci.yml and README.md.
+        minimum='v1.23.0'
+        if [[ "$(printf '%s\n' "$minimum" "$version" | sort -V | head -n1)" != "$minimum" ]]; then
+          echo "::error::DDEV $version isn't supported: github-action-cache-ddev needs $minimum or later."
+          exit 1
+        fi
+        echo "version=$version" >> "$GITHUB_OUTPUT"
 
     - name: Restore DDEV caches
       id: cache
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ runner.temp }}/ddev-cache
-        key: ddev-cache-${{ runner.os }}-${{ runner.arch }}-${{ steps.ddev.outputs.version }}-${{ hashFiles(format('{0}/composer.lock', inputs.ddevDir), format('{0}/package-lock.json', inputs.ddevDir), format('{0}/yarn.lock', inputs.ddevDir), format('{0}/.ddev/config.yaml', inputs.ddevDir)) }}
+        # Lock files anywhere in the project, such as a theme's package-lock.json,
+        # but not those of installed packages.
+        key: ddev-cache-${{ runner.os }}-${{ runner.arch }}-${{ steps.ddev.outputs.version }}-${{ hashFiles(format('{0}/**/composer.lock', inputs.ddevDir), format('{0}/**/package-lock.json', inputs.ddevDir), format('{0}/**/yarn.lock', inputs.ddevDir), format('!{0}/**/node_modules/**', inputs.ddevDir), format('!{0}/**/vendor/**', inputs.ddevDir), format('{0}/.ddev/config.yaml', inputs.ddevDir)) }}
         restore-keys: ddev-cache-${{ runner.os }}-${{ runner.arch }}-
 
     # DDEV keeps its caches in a Docker volume that actions/cache can't reach.

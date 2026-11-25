@@ -1,0 +1,4 @@
+name: cache-ddev-yarn1
+type: php
+docroot: ""
+omit_containers: [db]

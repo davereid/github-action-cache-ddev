@@ -4,6 +4,8 @@ Caches the package downloads [DDEV](https://ddev.com) already keeps, so GitHub w
 
 ## Usage
 
+It needs DDEV v1.23.0 or later, and fails on older versions: DDEV v1.21 and earlier can't start any more, and v1.22 has no Corepack support for Yarn 2 and later.
+
 Run it after DDEV is installed and before the project starts:
 
 ```yaml
@@ -64,7 +66,7 @@ DDEV keeps package caches in a Docker volume: `ddev-global-cache` up to v1.25, a
 
 Shell history and the Terminus cache, which holds a login session, aren't cached.
 
-The cache key covers `composer.lock`, `package-lock.json`, `yarn.lock`, `.ddev/config.yaml` and the DDEV version. When any of them changes, the newest older cache is restored, and a new one is saved at the end of the job.
+The cache key covers every `composer.lock`, `package-lock.json` and `yarn.lock` in the project (such as a theme's, but not those under `node_modules` or `vendor`), `.ddev/config.yaml` and the DDEV version. When any of them changes, the newest older cache is restored, and a new one is saved at the end of the job.
 
 Caching DDEV's Docker images doesn't help: restoring them takes longer than pulling them ([ddev/github-action-setup-ddev#15](https://github.com/ddev/github-action-setup-ddev/issues/15)). To skip the whole DDEV setup instead, including images and add-ons, use runners that start from a snapshot, as in [Using WarpBuild to speed up DDEV in CI](https://ddev.com/blog/ddev-ci-warpbuild/). Then this action isn't needed.
 
