@@ -178,7 +178,7 @@ jobs:
 
   # One check for the ci ruleset to require, instead of every matrix job.
   tests:
-    name: tests
+    name: All tests
     needs: [cache-save, cache-restore, too-old]
     if: always()
     runs-on: ubuntu-latest
