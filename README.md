@@ -4,6 +4,8 @@ Caches the package downloads [DDEV](https://ddev.com) already keeps, so GitHub w
 
 ## Usage
 
+It needs DDEV v1.23.0 or later, and fails on older versions: DDEV v1.21 and earlier can't start any more, and v1.22 has no Corepack support for Yarn 2 and later.
+
 Run it after DDEV is installed and before the project starts:
 
 ```yaml

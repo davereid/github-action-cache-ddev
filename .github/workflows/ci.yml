@@ -45,8 +45,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The oldest version ddev/github-action-setup-ddev tests, the latest release, and HEAD.
-        version: ['1.24.8', latest, head]
+        # The last release of each minor from the minimum in action.yml, the latest release, and HEAD.
+        version: ['1.23.5', '1.24.10', latest, head]
         os: [ubuntu-24.04, ubuntu-26.04, ubuntu-24.04-arm]
         fixture: [ddevProjComposerNpm, ddevProjYarn1, ddevProjYarn4]
         include:
@@ -87,8 +87,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The oldest version ddev/github-action-setup-ddev tests, the latest release, and HEAD.
-        version: ['1.24.8', latest, head]
+        # The last release of each minor from the minimum in action.yml, the latest release, and HEAD.
+        version: ['1.23.5', '1.24.10', latest, head]
         os: [ubuntu-24.04, ubuntu-26.04, ubuntu-24.04-arm]
         fixture: [ddevProjComposerNpm, ddevProjYarn1, ddevProjYarn4]
         include:
@@ -146,15 +146,45 @@ jobs:
           OFFLINE: ${{ matrix.offline }}
         run: eval "$OFFLINE"
 
+  # The last release before the minimum in action.yml must fail.
+  too-old:
+    name: Fails on DDEV 1.22
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read # actions/checkout
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # @todo Pin to a release once one supports version: head (ddev/github-action-setup-ddev#57).
+      - uses: ddev/github-action-setup-ddev@222a22f69087994aeb075fd87c45a8c8cd61ae76 # main
+        with:
+          ddevDir: tests/fixtures/ddevProjComposerNpm
+          version: '1.22.7'
+          autostart: false
+
+      - uses: ./
+        id: cache
+        continue-on-error: true
+        with:
+          ddevDir: tests/fixtures/ddevProjComposerNpm
+
+      - name: Action failed
+        env:
+          OUTCOME: ${{ steps.cache.outcome }}
+        run: test "$OUTCOME" = 'failure'
+
   # One check for the ci ruleset to require, instead of every matrix job.
   tests:
     name: tests
-    needs: [cache-save, cache-restore]
+    needs: [cache-save, cache-restore, too-old]
     if: always()
     runs-on: ubuntu-latest
     permissions: {}
     steps:
       - name: All tests passed
         env:
-          RESULT: ${{ needs.cache-restore.result }}
-        run: test "$RESULT" = 'success'
+          RESTORE: ${{ needs.cache-restore.result }}
+          TOO_OLD: ${{ needs.too-old.result }}
+        run: test "$RESTORE" = 'success' && test "$TOO_OLD" = 'success'

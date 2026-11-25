@@ -29,7 +29,14 @@ runs:
           echo "::error::DDEV isn't installed: run ddev/github-action-setup-ddev first."
           exit 1
         fi
-        echo "version=$(ddev --version | awk '{print $NF}')" >> "$GITHUB_OUTPUT"
+        version="$(ddev --version | awk '{print $NF}')"
+        # The oldest version CI tests. Keep it in sync with ci.yml and README.md.
+        minimum='v1.23.0'
+        if [[ "$(printf '%s\n' "$minimum" "$version" | sort -V | head -n1)" != "$minimum" ]]; then
+          echo "::error::DDEV $version isn't supported: github-action-cache-ddev needs $minimum or later."
+          exit 1
+        fi
+        echo "version=$version" >> "$GITHUB_OUTPUT"
 
     - name: Restore DDEV caches
       id: cache
