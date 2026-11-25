@@ -48,12 +48,14 @@ jobs:
         # The oldest version ddev/github-action-setup-ddev tests, the latest release, and HEAD.
         version: ['1.24.8', latest, head]
         os: [ubuntu-24.04, ubuntu-26.04, ubuntu-24.04-arm]
-        fixture: [ddevProjComposerNpm, ddevProjYarn4]
+        fixture: [ddevProjComposerNpm, ddevProjYarn1, ddevProjYarn4]
         include:
           - fixture: ddevProjComposerNpm
             install: ddev composer install && ddev npm ci && ddev exec --dir /var/www/html/web/themes/custom/example npm ci
           - fixture: ddevProjYarn4
             install: ddev yarn install --immutable
+          - fixture: ddevProjYarn1
+            install: ddev yarn install --frozen-lockfile
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -88,7 +90,7 @@ jobs:
         # The oldest version ddev/github-action-setup-ddev tests, the latest release, and HEAD.
         version: ['1.24.8', latest, head]
         os: [ubuntu-24.04, ubuntu-26.04, ubuntu-24.04-arm]
-        fixture: [ddevProjComposerNpm, ddevProjYarn4]
+        fixture: [ddevProjComposerNpm, ddevProjYarn1, ddevProjYarn4]
         include:
           # GIT_ALLOW_PROTOCOL stops Composer's fallback to cloning from source, and the
           # unreachable registries stop Corepack and Yarn from downloading.
@@ -96,6 +98,8 @@ jobs:
             offline: ddev exec 'COMPOSER_DISABLE_NETWORK=1 GIT_ALLOW_PROTOCOL=file composer install' && ddev npm ci --offline && ddev exec --dir /var/www/html/web/themes/custom/example npm ci --offline
           - fixture: ddevProjYarn4
             offline: ddev exec 'COREPACK_NPM_REGISTRY=http://127.0.0.1:9 YARN_NPM_REGISTRY_SERVER=http://127.0.0.1:9 yarn install --immutable'
+          - fixture: ddevProjYarn1
+            offline: ddev yarn install --frozen-lockfile --offline
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
