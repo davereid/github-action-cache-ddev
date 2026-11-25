@@ -108,6 +108,16 @@ jobs:
           version: ${{ matrix.version }}
           autostart: false
 
+      # cache-save had no installed packages when it built the key, so "Cache
+      # restored" fails if these lock files change it.
+      - name: Add lock files the cache key must ignore
+        working-directory: tests/fixtures/${{ matrix.fixture }}
+        run: |
+          mkdir -p vendor/example/package node_modules/example
+          echo '{}' > vendor/example/package/composer.lock
+          echo '{}' > node_modules/example/package-lock.json
+          echo '{}' > node_modules/example/yarn.lock
+
       - uses: ./
         id: cache
         with:
@@ -117,6 +127,10 @@ jobs:
         env:
           CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
         run: test "$CACHE_HIT" = 'true'
+
+      - name: Remove the ignored lock files
+        working-directory: tests/fixtures/${{ matrix.fixture }}
+        run: rm -r vendor node_modules
 
       - name: Start DDEV
         working-directory: tests/fixtures/${{ matrix.fixture }}
