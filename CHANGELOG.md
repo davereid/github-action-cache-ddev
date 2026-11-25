@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/davereid/github-action-cache-ddev/compare/v1.0.0...v1.1.0) (2026-11-25)
+
+
+### Features
+
+* support nested lock files and require DDEV v1.23.0 ([#12](https://github.com/davereid/github-action-cache-ddev/issues/12)) ([af9c9d1](https://github.com/davereid/github-action-cache-ddev/commit/af9c9d14e859567e957415eca3a7313d8704833f))
+
 ## 1.0.0 (2026-11-20)
 
 
