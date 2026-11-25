@@ -46,6 +46,7 @@ jobs:
       fail-fast: false
       matrix:
         # The last release of each minor from the minimum in action.yml, the latest release, and HEAD.
+        # When DDEV releases a new minor, add the previous minor's last release (e.g. '1.25.x' once v1.26.0 is out).
         version: ['1.23.5', '1.24.10', latest, head]
         os: [ubuntu-24.04, ubuntu-26.04, ubuntu-24.04-arm]
         fixture: [ddevProjComposerNpm, ddevProjYarn1, ddevProjYarn4]
@@ -87,7 +88,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The last release of each minor from the minimum in action.yml, the latest release, and HEAD.
+        # Same as cache-save.
         version: ['1.23.5', '1.24.10', latest, head]
         os: [ubuntu-24.04, ubuntu-26.04, ubuntu-24.04-arm]
         fixture: [ddevProjComposerNpm, ddevProjYarn1, ddevProjYarn4]
