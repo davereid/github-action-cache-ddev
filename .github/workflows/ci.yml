@@ -150,7 +150,7 @@ jobs:
   # The last release before the minimum in action.yml must fail.
   too-old:
     name: Fails on DDEV 1.22
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read # actions/checkout
     steps:
